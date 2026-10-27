@@ -1,0 +1,1113 @@
+<!doctype html>
+<html lang="ko">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover">
+<title>조달력테스트</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Black+Han+Sans&family=IBM+Plex+Mono:wght@400;500;600&family=IBM+Plex+Sans+KR:wght@400;500;600;700&display=swap">
+<style>
+/* Layout: 입찰서 한 장. 참가자는 폰 한 칸짜리 입찰서에 금액을 적고, 사회자는 16:9 개찰 전광판으로 결과를 공개한다. 붉은 낙찰 도장은 이 페이지에서 하나뿐인 강조색이다. */
+:root{
+  color-scheme:light;
+  --paper:#EDF0F4;
+  --sheet:#FFFFFF;
+  --tint:#E3EAF6;
+  --ink:#101B33;
+  --ink2:#4A5876;
+  --rule:#C9D1DE;
+  --blue:#1F55C7;
+  --onblue:#FFFFFF;
+  --stamp:#C9362B;
+  --onstamp:#FFFFFF;
+  --f-display:"Black Han Sans","Apple SD Gothic Neo","Malgun Gothic",sans-serif;
+  --f-body:"IBM Plex Sans KR","Apple SD Gothic Neo","Malgun Gothic",system-ui,sans-serif;
+  --f-num:"IBM Plex Mono",ui-monospace,Menlo,Consolas,monospace;
+}
+@media (prefers-color-scheme: dark){
+  :root:not([data-theme="light"]){
+    --paper:#0B1426; --sheet:#121E38; --tint:#1A2A4D; --ink:#E8EEFB; --ink2:#9AA9C7; --rule:#26355A;
+    --blue:#7BA2FF; --onblue:#0B1426; --stamp:#FF7466; --onstamp:#1A0907; color-scheme:dark;
+  }
+}
+:root[data-theme="dark"]{
+  --paper:#0B1426; --sheet:#121E38; --tint:#1A2A4D; --ink:#E8EEFB; --ink2:#9AA9C7; --rule:#26355A;
+  --blue:#7BA2FF; --onblue:#0B1426; --stamp:#FF7466; --onstamp:#1A0907; color-scheme:dark;
+}
+*{box-sizing:border-box}
+[hidden]{display:none!important}
+img{max-width:100%}
+html,body{margin:0}
+body{background:var(--paper);color:var(--ink);font:16px/1.55 var(--f-body);-webkit-text-size-adjust:100%}
+#app{
+  padding-left:max(16px,env(safe-area-inset-left,0px));
+  padding-right:max(16px,env(safe-area-inset-right,0px));
+  padding-block:12px 28px;
+  max-width:1560px;margin:0 auto;
+}
+#app.hasdock{padding-block:12px 120px}
+h1,h2,h3,p{margin:0}
+h2,h3{text-wrap:balance}
+button,input{font:inherit;color:inherit}
+.num{font-family:var(--f-num);font-variant-numeric:tabular-nums}
+.muted{color:var(--ink2);font-size:14px}
+.eyebrow{font:600 12px/1.4 var(--f-body);letter-spacing:.14em;color:var(--ink2)}
+.err{color:var(--stamp);font-weight:600;min-height:1.4em;font-size:14px}
+:focus-visible{outline:3px solid var(--blue);outline-offset:2px}
+
+/* 머리띠 */
+.mast{display:flex;align-items:center;justify-content:space-between;gap:12px;flex-wrap:wrap;padding-bottom:12px;border-bottom:2px solid var(--ink);margin-bottom:16px}
+.brand{display:flex;align-items:center;gap:10px;min-width:0}
+.brand h1{font:400 24px/1.1 var(--f-display);letter-spacing:.02em}
+.seal{display:grid;place-items:center;width:30px;height:30px;border:2px solid var(--stamp);color:var(--stamp);border-radius:4px;font:400 16px/1 var(--f-display);transform:rotate(-6deg)}
+.chip{display:inline-block;font:600 13px/1 var(--f-body);letter-spacing:.04em;padding:8px 14px;border:1.5px solid var(--ink);border-radius:999px;white-space:nowrap}
+.chip.live,.ribbon.live{background:var(--blue);border-color:var(--blue);color:var(--onblue)}
+.role{display:flex;gap:0;border:1.5px solid var(--ink);border-radius:6px;overflow:hidden}
+.role button,.tabs button{background:var(--sheet);border:0;padding:9px 14px;font-weight:600;cursor:pointer;min-height:40px}
+.role button.on,.tabs button.on{background:var(--ink);color:var(--paper)}
+.tabs{display:flex;align-items:center;gap:0;margin-bottom:16px;flex-wrap:wrap}
+.tabs button{border:1.5px solid var(--ink)}
+.tabs button + button{border-left:0}
+.save{margin-left:14px;font-size:13px;color:var(--ink2)}
+
+/* 공통 컴포넌트 */
+.btn{display:inline-flex;align-items:center;justify-content:center;gap:8px;min-height:48px;padding:12px 18px;border:1.5px solid var(--ink);border-radius:6px;background:var(--sheet);color:var(--ink);font-weight:600;font-size:16px;cursor:pointer}
+.btn.primary{background:var(--blue);border-color:var(--blue);color:var(--onblue)}
+.btn.stamp{background:var(--stamp);border-color:var(--stamp);color:var(--onstamp);font-size:18px;letter-spacing:.06em}
+.btn.small{min-height:36px;padding:6px 12px;font-size:14px}
+.btn.block{width:100%}
+.btn:disabled{opacity:.45;cursor:not-allowed}
+.link{background:none;border:0;padding:6px 0;color:var(--blue);font-weight:600;text-decoration:underline;cursor:pointer}
+.sheet{background:var(--sheet);border:1px solid var(--rule);border-top:5px double var(--ink);border-radius:2px;padding:20px}
+input[type=text],input[type=url],input[type=number],input[type=password],input[inputmode=numeric]{width:100%;min-height:46px;padding:10px 12px;border:1.5px solid var(--ink);border-radius:4px;background:var(--paper);color:var(--ink)}
+label{font-weight:600;font-size:14px}
+.ribbon{display:inline-block;font:600 14px/1 var(--f-body);letter-spacing:.08em;padding:8px 14px;border:1.5px solid var(--ink);border-radius:3px}
+.clock{font:600 clamp(36px,6vw,92px)/1 var(--f-num);font-variant-numeric:tabular-nums}
+.clock.low{color:var(--stamp)}
+
+/* 사회자 무대 */
+.st{min-height:62vh}
+.lobby{display:grid;grid-template-columns:minmax(0,1.4fr) minmax(0,1fr);gap:clamp(20px,4vw,64px);align-items:center}
+.lobby .hero{font:400 clamp(44px,8vw,128px)/1.02 var(--f-display);margin:8px 0 18px}
+.lobby .lead{font-size:clamp(16px,1.6vw,24px);max-width:36em;color:var(--ink2)}
+.players-box{margin-top:26px;display:grid;gap:12px}
+.players-box .count{font-size:clamp(16px,1.5vw,22px)}
+.players-box .count strong{font:600 clamp(28px,3vw,44px) var(--f-num)}
+.chips{list-style:none;margin:0;padding:0;display:flex;flex-wrap:wrap;gap:8px}
+.chips li{padding:6px 12px;background:var(--sheet);border:1px solid var(--rule);font-weight:600;font-size:clamp(14px,1.3vw,20px)}
+.toplist{margin-top:22px;max-width:34em}
+.toplist h3{font:700 15px var(--f-body);letter-spacing:.1em;color:var(--ink2);margin-bottom:6px}
+.toplist ol{list-style:none;margin:0;padding:0}
+.toplist li{display:grid;grid-template-columns:3rem minmax(0,1fr) auto;gap:10px;padding:8px 0;border-bottom:1px solid var(--rule);font-size:clamp(15px,1.4vw,22px)}
+.toplist .rk{font-family:var(--f-display)}
+.toplist .nm{font-weight:600;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+.toplist .pt{font-family:var(--f-num)}
+.qr{width:100%;max-width:440px;aspect-ratio:1;background:#fff;padding:10px;border:2px solid var(--ink);margin-inline:auto}
+.qr svg{display:block;width:100%;height:100%}
+.joinurl{margin-top:12px;text-align:center;font:500 14px var(--f-num);color:var(--ink2);overflow-wrap:anywhere}
+
+.item{display:grid;grid-template-columns:minmax(0,1.5fr) minmax(0,1fr);gap:clamp(20px,3vw,48px);align-items:center}
+.item-photo{display:grid;place-items:center;background:var(--sheet);border:1px solid var(--rule);padding:10px}
+.item-photo img{max-width:100%;max-height:66vh;object-fit:contain;display:block}
+.item-side{display:grid;gap:18px;align-content:center}
+.item-name{font:400 clamp(30px,4.4vw,68px)/1.12 var(--f-display)}
+.item-hint{font-size:clamp(16px,1.6vw,24px);color:var(--ink2)}
+.clockbox{display:flex;align-items:center;gap:18px;flex-wrap:wrap}
+.progress .bar{height:14px;border:1.5px solid var(--ink);background:var(--paper)}
+.progress .bar i{display:block;height:100%;width:0;background:var(--blue);transition:width .3s}
+.progress p{margin-top:8px;font-size:clamp(15px,1.4vw,20px)}
+.progress strong{font:600 1.3em var(--f-num)}
+
+.rv-head{display:flex;justify-content:space-between;align-items:flex-end;gap:20px;flex-wrap:wrap;margin-bottom:18px;padding-bottom:14px;border-bottom:2px solid var(--ink)}
+.rv-title{font:400 clamp(34px,5vw,76px)/1.05 var(--f-display);letter-spacing:.1em}
+.rv-item{font-size:clamp(16px,1.6vw,24px);color:var(--ink2);margin-top:4px}
+.rv-ans{display:grid;gap:2px;text-align:right;animation:rise .5s both}
+.rv-ans .lbl{font:600 13px var(--f-body);letter-spacing:.2em;color:var(--ink2)}
+.rv-ans .val{font:600 clamp(32px,4.6vw,72px)/1.05 var(--f-num)}
+.rv-ans .ko{font-size:clamp(14px,1.3vw,20px);color:var(--ink2)}
+.rows{display:block}
+@media (min-width:1000px){.rows.two{columns:2;column-gap:20px}}
+.row{position:relative;display:grid;grid-template-columns:2.6rem minmax(0,1fr) auto auto 3.6rem;gap:4px 14px;align-items:baseline;padding:10px 12px;border-bottom:1px solid var(--rule);background:var(--sheet);break-inside:avoid;animation:rise .45s both;animation-delay:var(--d,0ms)}
+.row .rk{font:400 22px/1 var(--f-display)}
+.row .nm{font-weight:700;font-size:clamp(16px,1.6vw,26px);overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+.row .bid{font:600 clamp(16px,1.5vw,24px) var(--f-num);font-variant-numeric:tabular-nums;white-space:nowrap}
+.row .df{font-size:clamp(12px,1vw,16px);color:var(--ink2);white-space:nowrap}
+.row .sc{font:600 clamp(16px,1.5vw,24px) var(--f-num);text-align:right;white-space:nowrap}
+.row.top{grid-template-columns:3.8rem minmax(0,1fr) auto auto 5rem;padding:22px 24px;border:2px solid var(--ink);margin-bottom:16px;margin-top:14px;background:var(--tint)}
+.row.top .rk{font-size:clamp(36px,4.4vw,70px)}
+.row.top .nm{font-size:clamp(24px,3.4vw,56px)}
+.row.top .bid{font-size:clamp(22px,3vw,48px)}
+.row.top .df{font-size:clamp(14px,1.3vw,20px)}
+.row.top .sc{font-size:clamp(22px,3vw,48px)}
+.stampmark{position:absolute;right:16px;top:-18px;transform:rotate(-8deg);border:3px double var(--stamp);color:var(--stamp);font:400 clamp(20px,2.4vw,38px)/1 var(--f-display);padding:4px 14px;letter-spacing:.12em;background:var(--sheet);animation:thud .35s both;animation-delay:calc(var(--d,0ms) + 450ms)}
+.none{margin-top:14px;color:var(--ink2);font-size:14px}
+.rule-note{margin-top:10px;color:var(--ink2);font-size:13px}
+.wait{padding:40px 0;color:var(--ink2);font-size:18px}
+@keyframes rise{from{opacity:0;transform:translateY(14px)}to{opacity:1;transform:none}}
+@keyframes thud{0%{opacity:0;transform:scale(1.9) rotate(-16deg)}60%{opacity:1;transform:scale(.94) rotate(-8deg)}100%{opacity:1;transform:scale(1) rotate(-8deg)}}
+
+/* 사회자 조작줄 */
+.dock{position:fixed;left:0;right:0;bottom:0;z-index:20;background:var(--sheet);border-top:2px solid var(--ink);display:flex;align-items:center;justify-content:space-between;gap:12px;flex-wrap:wrap;
+  padding:10px max(16px,env(safe-area-inset-right,0px)) calc(10px + env(safe-area-inset-bottom,0px)) max(16px,env(safe-area-inset-left,0px))}
+.dock-l,.dock-r{display:flex;align-items:center;gap:10px;flex-wrap:wrap;min-width:0}
+.dock-label{font-weight:600;max-width:34ch;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+.dock-label small{display:block;font-weight:400;color:var(--ink2);font-size:12px}
+.dock-label.warn small{color:var(--stamp);font-weight:600}
+
+/* 준비 탭 */
+.setup-grid{display:grid;grid-template-columns:repeat(auto-fit,minmax(min(100%,340px),1fr));gap:16px;align-items:start}
+.panel{background:var(--sheet);border:1px solid var(--rule);border-top:4px double var(--ink);padding:18px;display:grid;gap:12px;min-width:0}
+.panel.wide{grid-column:1/-1}
+.panel h3{font:700 17px var(--f-body)}
+.row-inline{display:flex;gap:10px;flex-wrap:wrap;align-items:center}
+.row-inline input{flex:1 1 220px}
+.fld{display:grid;gap:4px;min-width:0}
+.itemlist{display:grid;gap:12px}
+.it{display:grid;grid-template-columns:104px minmax(0,1fr);gap:14px;padding:12px;border:1px solid var(--rule);background:var(--paper)}
+.it img{width:104px;height:104px;object-fit:cover;display:block;border:1px solid var(--rule);background:var(--sheet)}
+.it-body{display:grid;gap:10px;min-width:0}
+.it-top{display:flex;justify-content:space-between;align-items:center;gap:10px;flex-wrap:wrap}
+.it-top .badge{font:600 12px var(--f-body);padding:4px 8px;border:1px solid var(--ink2);color:var(--ink2);margin-left:8px}
+.it-top .badge.ok{border-color:var(--blue);color:var(--blue)}
+.it-ctr{display:flex;gap:6px;flex-wrap:wrap}
+.it-fields{display:grid;grid-template-columns:repeat(auto-fit,minmax(min(100%,200px),1fr));gap:10px}
+.kohint{font-size:13px;color:var(--ink2);min-height:1.4em}
+.pl-list{list-style:none;margin:0;padding:0;display:flex;flex-wrap:wrap;gap:8px}
+.pl-list li{display:flex;align-items:center;gap:6px;padding:4px 4px 4px 10px;border:1px solid var(--rule);background:var(--paper);font-weight:600}
+.pl-list button{border:0;background:none;color:var(--stamp);font-weight:700;cursor:pointer;min-width:32px;min-height:32px}
+.empty{color:var(--ink2);padding:14px 0}
+.sr{position:absolute;width:1px;height:1px;overflow:hidden;clip:rect(0 0 0 0);white-space:nowrap}
+
+/* 참가자 폰 */
+.play{max-width:520px;margin:0 auto;display:grid;gap:16px}
+.banner{padding:12px 14px;border:1.5px solid var(--stamp);color:var(--stamp);font-weight:600;font-size:14px;background:var(--sheet)}
+.formhead{display:flex;justify-content:space-between;align-items:baseline;gap:10px;padding-bottom:10px;margin-bottom:14px;border-bottom:1px solid var(--ink)}
+.formhead .t{font:400 22px/1 var(--f-display);letter-spacing:.4em}
+.formhead .no{font-size:13px;color:var(--ink2)}
+.photo{width:100%;max-height:40vh;object-fit:contain;display:block;background:var(--paper);border:1px solid var(--rule)}
+.pname{font:400 26px/1.2 var(--f-display);margin-top:12px}
+.clockline{display:flex;align-items:center;justify-content:space-between;gap:12px;margin:14px 0}
+.clockline .clock{font-size:34px}
+.signer{display:flex;align-items:center;gap:10px;margin:14px 0 10px;font-size:14px;color:var(--ink2)}
+.signer b{color:var(--ink);font-size:16px}
+.signer .seal{width:26px;height:26px;font-size:14px}
+#bidIn{font:600 30px/1.2 var(--f-num);text-align:right;min-height:60px;margin-top:6px}
+.ko{font-size:16px;color:var(--ink2);min-height:1.6em;margin:6px 0 14px;overflow-wrap:anywhere}
+.ko.big{font-size:20px;color:var(--ink);font-weight:600}
+.num.big{font-size:34px;font-weight:600;margin:4px 0 12px}
+.row2{display:grid;grid-template-columns:1fr 1.4fr;gap:10px;margin-top:6px}
+.who{font:400 30px/1.2 var(--f-display);overflow-wrap:anywhere}
+.who small{font:400 15px var(--f-body);color:var(--ink2);margin-left:6px}
+.scorebox{margin:16px 0;padding:12px 14px;background:var(--tint);border:1px solid var(--rule)}
+.scorebox strong{font:600 28px var(--f-num)}
+.res-grid{display:grid;grid-template-columns:1fr 1fr;gap:12px;margin:14px 0}
+.res-grid div{padding:10px 12px;background:var(--paper);border:1px solid var(--rule)}
+.res-grid .k{display:block;font-size:12px;color:var(--ink2);letter-spacing:.06em}
+.res-grid .v{font:600 20px var(--f-num);overflow-wrap:anywhere}
+.myscore{position:relative;display:flex;align-items:baseline;gap:8px;margin:10px 0}
+.myscore .n{font:600 64px/1 var(--f-num)}
+.mystamp{margin-left:auto;border:3px double var(--stamp);color:var(--stamp);font:400 24px/1 var(--f-display);padding:4px 12px;letter-spacing:.12em;transform:rotate(-8deg)}
+.minilist{list-style:none;margin:10px 0 0;padding:0}
+.minilist li{display:grid;grid-template-columns:2.6rem minmax(0,1fr) auto;gap:8px;padding:7px 0;border-bottom:1px solid var(--rule);font-size:15px}
+.minilist .rk{font-family:var(--f-display)}
+.minilist .nm{font-weight:600;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+.minilist .pt{font-family:var(--f-num)}
+.gate{max-width:560px;margin:10vh auto;padding:24px;background:var(--sheet);border:1px solid var(--rule);border-top:5px double var(--ink)}
+.gate h2{font:400 26px var(--f-display);margin-bottom:8px}
+.foot{text-align:center;padding:24px 0 8px}
+#loginBox{margin:16px auto;display:grid;gap:12px}
+.toast{position:fixed;left:50%;transform:translateX(-50%);bottom:calc(96px + env(safe-area-inset-bottom,0px));z-index:30;max-width:min(92vw,460px);background:var(--ink);color:var(--paper);padding:12px 16px;font-weight:600;font-size:14px;border-radius:4px}
+
+@media (max-width:820px){
+  .lobby,.item{grid-template-columns:minmax(0,1fr)}
+  .st{min-height:0}
+  .it{grid-template-columns:72px minmax(0,1fr)}
+  .it img{width:72px;height:72px}
+}
+@media (max-width:640px){
+  .row .df{display:none}
+  .row,.row.top{grid-template-columns:2.4rem minmax(0,1fr) auto 3.2rem}
+}
+@media (prefers-reduced-motion:reduce){*{animation:none!important;transition:none!important}}
+</style>
+</head>
+<body>
+<div id="app">
+  <header class="mast">
+    <div class="brand"><span class="seal" aria-hidden="true">인</span><h1>조달력테스트</h1></div>
+    <span id="phaseChip" class="chip">접수 대기</span>
+    <nav id="roleNav" class="role" aria-label="화면 선택" hidden>
+      <button id="goHost" type="button">사회자</button>
+      <button id="goPlay" type="button">참가자 화면</button>
+    </nav>
+  </header>
+
+  <section id="gate" class="gate">
+    <h2 id="gateTitle">연결 중입니다</h2>
+    <p id="gateMsg" class="muted">서버에 연결하고 있습니다.</p>
+  </section>
+
+  <section id="loginBox" class="gate" hidden>
+    <h2>사회자 로그인</h2>
+    <p class="muted">Firebase에서 만든 사회자 이메일과 비밀번호를 입력합니다.</p>
+    <div class="fld"><label for="hostEmail">이메일</label><input id="hostEmail" type="text" inputmode="email" autocomplete="username" autocapitalize="off"></div>
+    <div class="fld"><label for="hostPw">비밀번호</label><input id="hostPw" type="password" autocomplete="current-password"></div>
+    <p id="loginErr" class="err" role="alert"></p>
+    <div class="row-inline"><button id="loginGo" type="button" class="btn primary">로그인</button><button id="loginCancel" type="button" class="btn">닫기</button></div>
+  </section>
+
+  <!-- 사회자 -->
+  <main id="hostView" hidden>
+    <div class="tabs">
+      <button id="tabRun" type="button" class="on">진행</button>
+      <button id="tabSetup" type="button">준비</button>
+      <span id="saveState" class="save"></span>
+    </div>
+
+    <section id="hostRun">
+      <div id="stage">
+        <div id="stLobby" class="st lobby" hidden>
+          <div>
+            <p id="lobEyebrow" class="eyebrow">참가자 입장</p>
+            <h2 class="hero">조달력<br>테스트</h2>
+            <p class="lead">사진 속 물품의 예정가격을 가장 가깝게 맞히는 사람이 이깁니다. 폰으로 QR을 찍고 닉네임을 입력하면 입장됩니다.</p>
+            <div class="players-box">
+              <p class="count"><strong id="lobCount">0</strong> 명 입장</p>
+              <ul id="lobChips" class="chips"></ul>
+            </div>
+            <div id="lobTop" class="toplist" hidden>
+              <h3>현재 순위</h3>
+              <ol id="lobTopList"></ol>
+            </div>
+          </div>
+          <div>
+            <div id="qrBox" class="qr" hidden></div>
+            <p id="joinShow" class="joinurl"></p>
+          </div>
+        </div>
+
+        <div id="stItem" class="st item" hidden>
+          <div class="item-photo"><img id="itImg" alt="입찰 대상 물품 사진"></div>
+          <div class="item-side">
+            <p class="eyebrow">공고 <span id="itNo">1</span> / <span id="itTotal">15</span></p>
+            <h2 id="itName" class="item-name"></h2>
+            <p id="itHint" class="item-hint" hidden></p>
+            <div class="clockbox"><span id="itState" class="ribbon live">투찰 중</span><span id="hClock" class="clock">--:--</span></div>
+            <div class="progress">
+              <div class="bar"><i id="itBar"></i></div>
+              <p><strong id="itDone">0</strong> / <span id="itAll">0</span> 명 투찰 완료</p>
+            </div>
+          </div>
+        </div>
+
+        <div id="stReveal" class="st" hidden></div>
+        <div id="stTotal" class="st" hidden></div>
+      </div>
+      <div id="dock" class="dock"></div>
+    </section>
+
+    <section id="hostSetup" hidden>
+      <div class="setup-grid">
+        <div class="panel">
+          <h3>접속 링크</h3>
+          <p class="muted">참가자가 QR로 여는 주소입니다. 비워 두면 지금 열려 있는 이 사이트의 주소를 자동으로 씁니다.</p>
+          <div class="row-inline">
+            <input id="joinUrl" type="url" inputmode="url" autocomplete="off" placeholder="자동">
+            <button id="joinSave" type="button" class="btn small">저장</button>
+          </div>
+        </div>
+        <div class="panel">
+          <h3>진행 설정</h3>
+          <div class="fld"><label for="cfgTimer">투찰 시간 (초, 0이면 제한 없음)</label><input id="cfgTimer" type="number" min="0" max="600" step="5" inputmode="numeric"></div>
+          <div class="fld"><label for="cfgK">오차 감점 배율</label><input id="cfgK" type="number" min="0.5" max="10" step="0.5" inputmode="decimal"></div>
+          <p id="kHint" class="kohint"></p>
+          <div class="row-inline"><button id="cfgSave" type="button" class="btn small">설정 저장</button></div>
+        </div>
+        <div class="panel wide">
+          <h3>물품 <span id="itemCount" class="muted"></span></h3>
+          <div class="row-inline">
+            <button id="fileBtn" type="button" class="btn primary small">사진 올리기</button>
+            <input id="fileIn" class="sr" type="file" accept="image/*" multiple tabindex="-1">
+            <span id="upStat" class="muted"></span>
+          </div>
+          <p class="muted">사진을 올리면 물품 카드가 생깁니다. 정답 가격은 사회자 계정에서만 읽을 수 있고, 개찰 전에는 참가자에게 전달되지 않습니다.</p>
+          <div id="itemList" class="itemlist"></div>
+        </div>
+        <div class="panel">
+          <h3>참가자 <span id="plCount" class="muted"></span></h3>
+          <ul id="plList" class="pl-list"></ul>
+          <p class="muted">부적절한 닉네임은 × 로 내보내면 다시 입력하게 됩니다.</p>
+        </div>
+        <div class="panel">
+          <h3>리허설 후 초기화</h3>
+          <p class="muted">모든 투찰과 개찰 결과를 지우고 첫 문항으로 돌아갑니다. 등록한 물품은 그대로 남습니다.</p>
+          <label class="row-inline" for="resetPlayers"><input id="resetPlayers" type="checkbox"> 참가자 목록도 함께 지우기</label>
+          <div class="row-inline"><button id="resetBtn" type="button" class="btn small">투찰·점수 초기화</button></div>
+        </div>
+      </div>
+    </section>
+  </main>
+
+  <!-- 참가자 -->
+  <main id="playView" class="play" hidden>
+    <p id="roBanner" class="banner" hidden>지금은 투찰할 수 없습니다. 페이지를 새로고침해 주세요.</p>
+
+    <section id="pJoin" class="sheet" hidden>
+      <p class="eyebrow">입찰자 등록</p>
+      <h2 id="joinTitle" class="who">닉네임을 정해 주세요</h2>
+      <p class="muted" style="margin:6px 0 14px">개찰 때 화면에 이 이름이 나옵니다. 10자까지 쓸 수 있습니다.</p>
+      <label for="nickIn">닉네임</label>
+      <input id="nickIn" type="text" maxlength="20" autocomplete="off" placeholder="예: 풀뜯어먹는라마">
+      <p id="nickErr" class="err" role="alert"></p>
+      <button id="nickGo" type="button" class="btn primary block">입장하기</button>
+      <button id="nickCancel" type="button" class="link" hidden>취소</button>
+    </section>
+
+    <section id="pWait" class="sheet" hidden>
+      <p class="eyebrow">입장 완료</p>
+      <h2 class="who"><span id="wNick"></span><small>님 (인)</small></h2>
+      <p class="muted" style="margin-top:8px">사회자가 문항을 열면 이 화면에 사진과 입찰서가 나타납니다.</p>
+      <div id="wScore" class="scorebox" hidden>누적 <strong id="wTotal">0</strong> 점 · <span id="wRank"></span></div>
+      <button id="nickEdit" type="button" class="link">닉네임 바꾸기</button>
+    </section>
+
+    <section id="pItem" class="sheet" hidden>
+      <div class="formhead"><span class="t">입찰서</span><span class="no">공고 <b id="pNo">1</b> / <b id="pTotal">15</b></span></div>
+      <img id="pImg" class="photo" alt="입찰 대상 물품 사진">
+      <h2 id="pName" class="pname"></h2>
+      <p id="pHint" class="muted" hidden></p>
+      <div class="clockline"><span id="pRibbon" class="ribbon live">투찰 중</span><span id="pClock" class="clock num">--:--</span></div>
+      <p class="signer">입찰자 <b id="pSigner"></b> <span class="seal" aria-hidden="true">인</span></p>
+
+      <div id="bidForm">
+        <label for="bidIn">입찰금액 (원)</label>
+        <input id="bidIn" type="text" inputmode="numeric" autocomplete="off" placeholder="0" aria-describedby="bidKo">
+        <p id="bidKo" class="ko" aria-live="polite"></p>
+        <button id="bidGo" type="button" class="btn primary block">투찰하기</button>
+      </div>
+
+      <div id="bidConfirm" hidden>
+        <p class="muted">아래 금액으로 투찰합니다. 투찰 후에는 고칠 수 없습니다.</p>
+        <p id="cfNum" class="num big"></p>
+        <p id="cfKo" class="ko big"></p>
+        <div class="row2">
+          <button id="cfBack" type="button" class="btn">고치기</button>
+          <button id="cfOk" type="button" class="btn stamp">투찰 확정</button>
+        </div>
+      </div>
+
+      <div id="bidDone" hidden>
+        <p class="eyebrow">투찰 완료</p>
+        <p id="doneNum" class="num big"></p>
+        <p id="doneKo" class="ko"></p>
+        <p class="muted">개찰을 기다려 주세요.</p>
+      </div>
+      <p id="bidMiss" class="muted" hidden>이번 문항은 투찰하지 못했습니다. 다음 문항을 기다려 주세요.</p>
+      <p id="bidErr" class="err" role="alert"></p>
+    </section>
+
+    <section id="pResult" class="sheet" hidden>
+      <div class="formhead"><span class="t">개찰 결과</span><span id="rsName" class="no"></span></div>
+      <p id="rsWait" class="muted" hidden>결과를 불러오는 중입니다.</p>
+      <div id="rsBody" hidden>
+        <p class="eyebrow">예정가격</p>
+        <p id="rsAnswer" class="num big"></p>
+        <div id="rsMine" hidden>
+          <div class="myscore"><span id="rsScore" class="n">0</span><span>점</span><span id="rsStamp" class="mystamp" hidden>낙찰</span></div>
+          <div class="res-grid">
+            <div><span class="k">내 투찰가</span><span id="rsBid" class="v"></span></div>
+            <div><span class="k">예정가격 대비</span><span id="rsDiff" class="v" style="font-size:16px"></span></div>
+            <div><span class="k">이번 순위</span><span id="rsRank" class="v" style="font-size:16px"></span></div>
+            <div><span class="k">누적</span><span id="rsTotal" class="v" style="font-size:16px"></span></div>
+          </div>
+        </div>
+        <p id="rsNone" class="muted" hidden>이번 문항은 투찰하지 않았습니다. 0점입니다.</p>
+        <p class="eyebrow" style="margin-top:14px">이번 문항 상위</p>
+        <ol id="rsTop" class="minilist"></ol>
+      </div>
+    </section>
+
+    <section id="pFinal" class="sheet" hidden>
+      <div class="formhead"><span class="t">최종 순위</span><span id="ptCount" class="no"></span></div>
+      <p class="eyebrow">내 순위</p>
+      <p id="ptMine" class="who" style="margin:4px 0 12px"></p>
+      <ol id="ptList" class="minilist"></ol>
+    </section>
+  </main>
+
+  <footer class="foot"><button id="loginToggle" type="button" class="link">사회자 로그인</button></footer>
+
+  <div id="toast" class="toast" role="status" hidden></div>
+</div>
+
+<script src="https://cdn.jsdelivr.net/npm/qrcode-generator@1.4.4/qrcode.js"></script>
+<script src="https://www.gstatic.com/firebasejs/10.14.1/firebase-app-compat.js"></script>
+<script src="https://www.gstatic.com/firebasejs/10.14.1/firebase-auth-compat.js"></script>
+<script src="https://www.gstatic.com/firebasejs/10.14.1/firebase-firestore-compat.js"></script>
+<script src="firebase-config.js"></script>
+<script>
+(function(){
+'use strict';
+//#pure-start
+const fmt=n=>Number(n).toLocaleString('ko-KR');
+const onlyDigits=s=>String(s==null?'':s).replace(/\D/g,'').slice(0,11);
+function koAmount(n){
+  n=Math.floor(Number(n));
+  if(!Number.isFinite(n)||n<=0) return '';
+  const D=['','일','이','삼','사','오','육','칠','팔','구'];
+  const U=['','십','백','천'];
+  const B=['','만','억','조'];
+  const s=String(n);
+  const groups=[];
+  for(let i=s.length;i>0;i-=4) groups.unshift(s.slice(Math.max(0,i-4),i));
+  let out='';
+  groups.forEach((g,gi)=>{
+    const bi=groups.length-1-gi; let part='';
+    for(let k=0;k<g.length;k++){const d=+g[k]; if(d) part+=D[d]+U[g.length-1-k];}
+    if(part) out+=part+B[bi];
+  });
+  return out;
+}
+function scoreOf(p,ans,k){
+  const err=Math.abs(p-ans); const pct=err/ans*100;
+  let s=Math.round(100-pct*k); if(err>0&&s>99) s=99;
+  return Math.max(0,Math.min(100,s));
+}
+function rankBy(list,key){ let prev,rank=0; list.forEach((x,i)=>{ if(i===0||x[key]!==prev){rank=i+1;prev=x[key];} x.rank=rank;}); return list; }
+function nickIn(players,u){
+  const p=players[u]; if(!p) return '(알 수 없음)';
+  const same=Object.entries(players).filter(e=>e[1].nick===p.nick).sort((a,b)=>((a[1].at||0)-(b[1].at||0))||(a[0]<b[0]?-1:1));
+  const i=same.findIndex(e=>e[0]===u);
+  return i>0?p.nick+' ('+(i+1)+')':p.nick;
+}
+//#pure-end
+
+const $=(s,r)=>(r||document).querySelector(s);
+const $$=(s,r)=>Array.from((r||document).querySelectorAll(s));
+function h(tag,cls,txt){const e=document.createElement(tag); if(cls) e.className=cls; if(txt!=null) e.textContent=txt; return e;}
+
+const S={state:null,config:{},players:{},reveals:{},bids:{},myBids:{},recvAt:0};
+let db=null,fs=null,auth=null,uid=null,canEdit=false,canWrite=true,booted=false;
+let hostTab='run',draft=[],draftLoaded=false,cursor=null,cursorInit=false,busy=false,autoBusy=false;
+let saveTimer=0,saving=false,saveAgain=false,renderTimer=0;
+let editingNick=false,joinFor='',confirming=false,pendingBid=0,submitting=false,pItemId='';
+let dockSig='',revKey='',totKey='',qrUrl='';
+
+/* ---------- 공통 ---------- */
+let toastT=0;
+function toast(msg){const t=$('#toast'); t.textContent=msg; t.hidden=false; clearTimeout(toastT); toastT=setTimeout(()=>{t.hidden=true;},3800);}
+function errText(e){
+  const c=e&&e.code;
+  if(c==='invalid_argument'||c==='permission-denied') return '권한이 없거나 지금은 할 수 없는 동작입니다.';
+  if(c==='resource-exhausted') return '무료 사용 한도에 걸렸습니다. 잠시 뒤에 다시 시도해 주세요.';
+  if(c==='quota_exceeded') return '저장 한도를 넘었습니다.';
+  if(c==='resource_exhausted'||c==='rate_limited') return '요청이 너무 빠릅니다. 조금 뒤에 다시 눌러 주세요.';
+  if(c==='revoked') return '접근 권한이 바뀌었습니다. 새로고침해 주세요.';
+  return '연결이 불안정합니다. 다시 시도해 주세요.';
+}
+function gate(title,msg){
+  $('#gateTitle').textContent=title; $('#gateMsg').textContent=msg; $('#gate').hidden=false;
+  $('#hostView').hidden=true; $('#playView').hidden=true; $('#roleNav').hidden=true;
+}
+const nickOf=u=>nickIn(S.players,u);
+function playersSorted(){return Object.entries(S.players).map(e=>({uid:e[0],nick:e[1].nick,at:e[1].at||0})).sort((a,b)=>a.at-b.at||(a.uid<b.uid?-1:1));}
+function totalsList(){
+  const t={},c={};
+  Object.values(S.reveals).forEach(r=>(r.rows||[]).forEach(row=>{t[row.uid]=(t[row.uid]||0)+row.score;c[row.uid]=(c[row.uid]||0)+1;}));
+  const list=Object.keys(S.players).map(u=>({uid:u,nick:nickOf(u),total:t[u]||0,n:c[u]||0}));
+  list.sort((a,b)=>b.total-a.total||a.nick.localeCompare(b.nick,'ko'));
+  return rankBy(list,'total');
+}
+function diffText(x){return x.diff===0?'정확히 일치':(x.diff>0?'▲ ':'▼ ')+fmt(Math.abs(x.diff))+'원 ('+x.pct.toFixed(1)+'%)';}
+function qrSvg(url){
+  if(typeof qrcode!=='function') return '';
+  try{
+    const q=qrcode(0,'M'); q.addData(url); q.make();
+    const n=q.getModuleCount(), m=2; let d='';
+    for(let r=0;r<n;r++) for(let c=0;c<n;c++) if(q.isDark(r,c)) d+='M'+(c+m)+' '+(r+m)+'h1v1h-1z';
+    const s=n+m*2;
+    return '<svg viewBox="0 0 '+s+' '+s+'" xmlns="http://www.w3.org/2000/svg" shape-rendering="crispEdges" role="img" aria-label="접속 QR 코드"><rect width="'+s+'" height="'+s+'" fill="#fff"/><path d="'+d+'" fill="#101B33"/></svg>';
+  }catch(e){return '';}
+}
+function selfUrl(){return location.origin+location.pathname.replace(/index\.html$/,'');}
+function fmtClock(s){s=Math.max(0,Math.ceil(s));return String(Math.floor(s/60)).padStart(2,'0')+':'+String(s%60).padStart(2,'0');}
+function validItem(it){return !!(it&&it.img&&it.price>0);}
+function curView(){const hsh=location.hash.slice(1); if(!canEdit) return 'play'; return hsh==='play'?'play':'host';}
+
+/* ---------- 상태 쓰기 (사회자) ---------- */
+async function setState(o){
+  const next=Object.assign({phase:'lobby'},S.state||{},o,{at:Date.now()});
+  await db.doc('game/state').set(next);
+}
+function act(fn){
+  return async()=>{
+    if(busy) return;
+    busy=true; dockSig=''; schedule();
+    try{await fn();}catch(e){console.error(e);toast(errText(e));}
+    busy=false; dockSig=''; schedule();
+  };
+}
+async function openRound(){
+  const it=draft[cursor];
+  if(!validItem(it)){toast('사진과 정답 가격이 모두 등록된 물품만 열 수 있습니다.');return;}
+  if(S.reveals[it.id]){toast('이미 개찰한 문항입니다.');return;}
+  const dur=Number(S.config.timerSec==null?60:S.config.timerSec)||0;
+  await setState({phase:'open',cursor:cursor,itemId:it.id,name:it.name||'',hint:it.hint||'',imgId:it.img,round:cursor+1,total:draft.length,durSec:dur,openedAt:Date.now()});
+}
+async function closeRound(){ if(S.state&&S.state.phase==='open') await setState({phase:'closed'}); }
+async function revealRound(st){
+  const it=draft.find(x=>x.id===st.itemId);
+  if(!it||!(it.price>0)){toast('정답 가격을 찾지 못했습니다. 준비 탭을 확인해 주세요.');return;}
+  const k=Number(S.config.k==null?2:S.config.k)||2;
+  const res=await Promise.all([db.collection('bids').get(),db.collection('players').get()]);
+  const players={}; res[1].docs.forEach(d=>{players[d.id]=d.data();});
+  const bidDocs={}; res[0].docs.forEach(d=>{bidDocs[d.id]=d.data();});
+  const rows=[],none=[];
+  Object.keys(players).forEach(u=>{
+    const b=bidDocs[u]&&bidDocs[u].b&&bidDocs[u].b[st.itemId];
+    const nick=nickIn(players,u);
+    if(b&&Number.isFinite(b.p)&&b.p>=0) rows.push({uid:u,nick:nick,p:b.p,at:b.at||0});
+    else none.push({uid:u,nick:nick});
+  });
+  rows.forEach(r=>{r.err=Math.abs(r.p-it.price);r.diff=r.p-it.price;r.pct=r.err/it.price*100;r.score=scoreOf(r.p,it.price,k);});
+  rows.sort((a,b)=>a.err-b.err||a.at-b.at);
+  rankBy(rows,'err');
+  await db.doc('reveals/'+st.itemId).set({itemId:st.itemId,no:st.round,name:it.name||'',img:it.img,answer:it.price,k:k,rows:rows,none:none,at:Date.now()});
+  await setState({phase:'revealed'});
+}
+async function nextRound(){
+  const nxt=draft.findIndex((x,i)=>i>cursor&&!S.reveals[x.id]);
+  if(nxt<0){await setState({phase:'total'});return;}
+  cursor=nxt; await setState({phase:'lobby',cursor:nxt});
+}
+function moveCursor(d){
+  const n=Math.max(0,Math.min(draft.length-1,cursor+d)); if(n===cursor) return;
+  cursor=n; dockSig=''; schedule(); setState({cursor:n}).catch(()=>{});
+}
+async function resetGame(alsoPlayers){
+  const res=await Promise.all([db.collection('bids').get(),db.collection('reveals').get(),alsoPlayers?db.collection('players').get():Promise.resolve(null)]);
+  for(const d of res[0].docs) await db.doc('bids/'+d.id).delete();
+  for(const d of res[1].docs) await db.doc('reveals/'+d.id).delete();
+  if(res[2]) for(const d of res[2].docs) await db.doc('players/'+d.id).delete();
+  cursor=0; revKey=''; totKey='';
+  await db.doc('game/state').set({phase:'lobby',cursor:0,at:Date.now()});
+}
+
+/* ---------- 렌더 ---------- */
+function schedule(){ if(renderTimer) return; renderTimer=setTimeout(()=>{renderTimer=0;try{render();}catch(e){console.error(e);}},30); }
+function render(){
+  if(!booted) return;
+  const v=curView();
+  $('#gate').hidden=true;
+  $('#hostView').hidden=v!=='host'; $('#playView').hidden=v!=='play';
+  $('#roleNav').hidden=!canEdit;
+  $('#loginToggle').textContent=canEdit?'사회자 로그아웃':'사회자 로그인';
+  $('#goHost').classList.toggle('on',v==='host'); $('#goPlay').classList.toggle('on',v==='play');
+  $('#app').classList.toggle('hasdock',v==='host'&&hostTab==='run');
+  const ph=S.state?S.state.phase:'lobby';
+  const m={lobby:['접수 대기',0],open:['투찰 중',1],closed:['투찰 마감',0],revealed:['개찰 완료',0],total:['최종 순위',0]};
+  const c=m[ph]||m.lobby; const chip=$('#phaseChip'); chip.textContent=c[0]; chip.classList.toggle('live',!!c[1]);
+  if(v==='host') renderHost(); else renderPlay();
+}
+function ensureCursor(){
+  if(!cursorInit&&S.stateReady){cursor=(S.state&&Number.isInteger(S.state.cursor))?S.state.cursor:0; cursorInit=true;}
+  if(cursor==null) cursor=0;
+  cursor=draft.length?Math.max(0,Math.min(draft.length-1,cursor)):0;
+}
+function renderHost(){
+  $('#tabRun').classList.toggle('on',hostTab==='run'); $('#tabSetup').classList.toggle('on',hostTab==='setup');
+  $('#hostRun').hidden=hostTab!=='run'; $('#hostSetup').hidden=hostTab!=='setup';
+  ensureCursor();
+  if(hostTab==='run'){paintStage();paintDock();} else paintSetup();
+}
+function paintStage(){
+  const st=S.state, ph=st?st.phase:'lobby';
+  const show=id=>{['stLobby','stItem','stReveal','stTotal'].forEach(x=>{$('#'+x).hidden=x!==id;});};
+  if(ph==='open'||ph==='closed'){show('stItem');paintItem();}
+  else if(ph==='revealed'){show('stReveal');paintReveal();}
+  else if(ph==='total'){show('stTotal');paintTotal();}
+  else {show('stLobby');paintLobby();}
+  if(ph!=='revealed') revKey='';
+  if(ph!=='total') totKey='';
+}
+function paintLobby(){
+  const list=playersSorted();
+  $('#lobCount').textContent=list.length;
+  $('#lobChips').replaceChildren(...list.map(p=>h('li',null,nickOf(p.uid))));
+  const has=Object.keys(S.reveals).length>0;
+  $('#lobEyebrow').textContent=has?'다음 문항 준비 중':'참가자 입장';
+  const top=has?totalsList().slice(0,5):[];
+  $('#lobTop').hidden=!top.length;
+  $('#lobTopList').replaceChildren(...top.map(t=>{const li=h('li'); li.append(h('span','rk',t.rank+'위'),h('span','nm',t.nick),h('span','pt',fmt(t.total)+'점')); return li;}));
+  const url=S.config.joinUrl||selfUrl();
+  if(url!==qrUrl){
+    qrUrl=url; const svg=url?qrSvg(url):'';
+    $('#qrBox').innerHTML=svg; $('#qrBox').hidden=!svg;
+    $('#joinShow').textContent=url?url.replace(/^https?:\/\//,''):'접속 링크가 비어 있습니다. 준비 탭에서 입력해 주세요.';
+  }
+}
+function paintItem(){
+  const st=S.state, img=$('#itImg');
+  if(img.dataset.want!==st.imgId) setImg(img,st.imgId);
+  $('#itNo').textContent=st.round; $('#itTotal').textContent=st.total;
+  $('#itName').textContent=st.name||('문항 '+st.round);
+  $('#itHint').textContent=st.hint||''; $('#itHint').hidden=!st.hint;
+  const open=st.phase==='open';
+  const rb=$('#itState'); rb.textContent=open?'투찰 중':'투찰 마감'; rb.classList.toggle('live',open);
+  const ids=Object.keys(S.players);
+  const done=ids.filter(u=>S.bids[u]&&S.bids[u].b&&S.bids[u].b[st.itemId]).length;
+  $('#itDone').textContent=done; $('#itAll').textContent=ids.length;
+  $('#itBar').style.width=(ids.length?done/ids.length*100:0)+'%';
+  tick();
+}
+function paintReveal(){
+  const st=S.state, rev=S.reveals[st.itemId], box=$('#stReveal');
+  if(!rev){ if(revKey!=='wait'){revKey='wait'; box.replaceChildren(h('p','wait','개찰 결과를 불러오는 중입니다.'));} return; }
+  const key=st.itemId+'|'+rev.at; if(key===revKey) return; revKey=key;
+  const head=h('div','rv-head');
+  const l=h('div'); l.append(h('p','eyebrow','공고 '+rev.no+' 개찰'),h('h2','rv-title','개 찰 결 과'));
+  if(rev.name) l.append(h('p','rv-item',rev.name));
+  const r=h('div','rv-ans'); r.append(h('span','lbl','예정가격'),h('span','val num',fmt(rev.answer)+'원'),h('span','ko','일금 '+koAmount(rev.answer)+'원정'));
+  head.append(l,r);
+  const rows=h('div','rows'+(rev.rows.length>9?' two':''));
+  if(!rev.rows.length) rows.append(h('p','wait','투찰한 사람이 없습니다.'));
+  rev.rows.forEach((x,i)=>{
+    const top=x.rank===1; const row=h('div','row'+(top?' top':''));
+    row.style.setProperty('--d',(top?900+i*150:1500+i*160)+'ms');
+    row.append(h('span','rk',x.rank),h('span','nm',x.nick),h('span','bid num',fmt(x.p)+'원'),h('span','df',diffText(x)),h('span','sc num',x.score+'점'));
+    if(top) row.append(h('span','stampmark','낙찰'));
+    rows.append(row);
+  });
+  const out=[head,rows];
+  if(rev.none&&rev.none.length) out.push(h('p','none','미투찰 '+rev.none.length+'명: '+rev.none.map(n=>n.nick).join(', ')));
+  out.push(h('p','rule-note','점수는 100점에서 오차율(%) × '+rev.k+'점을 뺀 값입니다. 정확히 맞히면 100점입니다.'));
+  box.replaceChildren(...out);
+}
+function paintTotal(){
+  const list=totalsList(); const key=list.map(x=>x.uid+':'+x.total+':'+x.nick).join('|'); if(key===totKey) return; totKey=key;
+  const box=$('#stTotal'); const nRev=Object.keys(S.reveals).length;
+  const head=h('div','rv-head'); const l=h('div'); l.append(h('p','eyebrow','총 '+nRev+'문항 합산'),h('h2','rv-title','최 종 순 위')); head.append(l);
+  const rows=h('div','rows'+(list.length>9?' two':''));
+  list.forEach((x,i)=>{
+    const top=x.rank===1; const row=h('div','row'+(top?' top':'')); row.style.setProperty('--d',(top?300:900+i*140)+'ms');
+    row.append(h('span','rk',x.rank),h('span','nm',x.nick),h('span','bid num',fmt(x.total)+'점'),h('span','df',x.n+'문항 투찰'),h('span','sc num',''));
+    if(top) row.append(h('span','stampmark','최종 낙찰'));
+    rows.append(row);
+  });
+  if(!list.length) rows.append(h('p','wait','아직 참가자가 없습니다.'));
+  box.replaceChildren(head,rows);
+}
+function mk(label,cls,fn,dis){const b=h('button','btn '+(cls||''),label); b.type='button'; if(dis) b.disabled=true; b.addEventListener('click',fn); return b;}
+function paintDock(){
+  const st=S.state, ph=st?st.phase:'lobby';
+  const it=draft[cursor]; const done=!!(it&&S.reveals[it.id]);
+  const nRev=Object.keys(S.reveals).length;
+  const sig=[ph,cursor,draft.length,busy,done,it&&it.id,validItem(it),nRev,draftLoaded].join('|');
+  if(sig===dockSig) return; dockSig=sig;
+  const dock=$('#dock'); const l=h('div','dock-l'), r=h('div','dock-r');
+  const label=h('div','dock-label');
+  if(ph==='open'||ph==='closed'||ph==='revealed'){
+    label.textContent='공고 '+st.round+' / '+st.total; label.append(h('small',null,st.name||''));
+  } else if(ph==='total'){
+    label.textContent='최종 순위 화면';
+  } else if(!draftLoaded){
+    label.textContent='물품을 불러오는 중입니다';
+  } else if(!draft.length){
+    label.textContent='등록된 물품이 없습니다'; label.append(h('small',null,'준비 탭에서 사진과 정답 가격을 등록해 주세요.'));
+  } else {
+    const prev=mk('◀','small',()=>moveCursor(-1),cursor<=0), next=mk('▶','small',()=>moveCursor(1),cursor>=draft.length-1);
+    prev.setAttribute('aria-label','이전 문항'); next.setAttribute('aria-label','다음 문항');
+    label.textContent='문항 '+(cursor+1)+' / '+draft.length+' · '+((it&&it.name)||'이름 없음');
+    const sm=h('small',null,done?'개찰 완료':(validItem(it)?'투찰 시작 가능':'정답 가격 또는 사진이 없습니다'));
+    label.append(sm); if(!done&&!validItem(it)) label.classList.add('warn');
+    l.append(prev,next);
+  }
+  l.append(label);
+  if(ph==='open'){
+    r.append(mk('투찰 마감','',act(closeRound),busy),mk('개찰!','stamp',act(async()=>{const s=S.state; await closeRound(); await revealRound(s);}),busy));
+  } else if(ph==='closed'){
+    r.append(mk('개찰!','stamp',act(async()=>{await revealRound(S.state);}),busy));
+  } else if(ph==='revealed'){
+    const hasNext=draft.some((x,i)=>i>cursor&&!S.reveals[x.id]);
+    if(hasNext){r.append(mk('다음 문항','primary',act(nextRound),busy),mk('최종 순위 보기','',act(async()=>{await setState({phase:'total'});}),busy));}
+    else r.append(mk('최종 순위 보기','primary',act(async()=>{await setState({phase:'total'});}),busy));
+  } else if(ph==='total'){
+    r.append(mk('진행 화면으로','primary',act(async()=>{await setState({phase:'lobby'});}),busy));
+  } else {
+    if(!draft.length) r.append(mk('물품 등록하러 가기','primary',()=>{hostTab='setup';schedule();}));
+    else {
+      r.append(mk('투찰 시작','primary',act(openRound),busy||done||!validItem(it)));
+      if(nRev) r.append(mk('최종 순위 보기','',act(async()=>{await setState({phase:'total'});}),busy));
+    }
+  }
+  dock.replaceChildren(l,r);
+}
+
+/* ---------- 준비 탭 ---------- */
+function setSave(t){$('#saveState').textContent=t;}
+function touch(){setSave('저장 대기');clearTimeout(saveTimer);saveTimer=setTimeout(doSave,700);}
+async function doSave(){
+  if(saving){saveAgain=true;return;}
+  saving=true; setSave('저장 중');
+  try{
+    await db.doc('secret/items').set({list:draft.map(x=>({id:x.id,img:x.img,name:x.name||'',hint:x.hint||'',price:x.price||null,memo:x.memo||''})),savedAt:Date.now()});
+    setSave('저장됨');
+  }catch(e){console.error(e);setSave('저장 실패');toast(errText(e));}
+  saving=false; if(saveAgain){saveAgain=false;doSave();}
+}
+function fld(label,id,val,onInput,attrs){
+  const w=h('div','fld'); const l=h('label',null,label); l.htmlFor=id;
+  const i=h('input'); i.id=id; i.type='text'; i.autocomplete='off'; i.value=val||''; Object.assign(i,attrs||{});
+  i.addEventListener('input',()=>onInput(i.value)); w.append(l,i); return w;
+}
+function itemCard(it,i){
+  const card=h('article','it');
+  const img=h('img'); img.alt='물품 '+(i+1)+' 사진'; setImg(img,it.img);
+  const body=h('div','it-body');
+  const top=h('div','it-top'); const ttl=h('div'); ttl.append(h('strong',null,'문항 '+(i+1)));
+  const badge=h('span','badge'); const setBadge=()=>{badge.textContent=validItem(it)?'준비됨':'정답 가격 필요'; badge.classList.toggle('ok',validItem(it));}; setBadge(); ttl.append(badge);
+  const ctr=h('div','it-ctr');
+  const up=mk('▲','small',()=>{if(i>0){[draft[i-1],draft[i]]=[draft[i],draft[i-1]];renderItems();touch();}},i===0); up.setAttribute('aria-label','위로');
+  const dn=mk('▼','small',()=>{if(i<draft.length-1){[draft[i+1],draft[i]]=[draft[i],draft[i+1]];renderItems();touch();}},i===draft.length-1); dn.setAttribute('aria-label','아래로');
+  let arm=0; const del=mk('삭제','small',()=>{
+    if(!arm){arm=1;del.textContent='정말 삭제';setTimeout(()=>{arm=0;del.textContent='삭제';},3000);return;}
+    const gone=draft.splice(i,1)[0]; if(gone&&gone.img){delete photoCache[gone.img]; db.doc('photos/'+gone.img).delete().catch(()=>{});} renderItems(); touch();
+  });
+  ctr.append(up,dn,del); top.append(ttl,ctr);
+  const f=h('div','it-fields');
+  f.append(
+    fld('물품명 (참가자에게 보임)','nm-'+it.id,it.name,v=>{it.name=v;touch();},{maxLength:40,placeholder:'예: 3단 자동 우산'}),
+    fld('보충 설명 (선택)','hn-'+it.id,it.hint,v=>{it.hint=v;touch();},{maxLength:40,placeholder:'예: 1개 기준'})
+  );
+  const pw=h('div','fld'); const pl=h('label',null,'정답 가격 (원)'); pl.htmlFor='pr-'+it.id;
+  const pin=h('input'); pin.id='pr-'+it.id; pin.type='text'; pin.inputMode='numeric'; pin.autocomplete='off'; pin.placeholder='0'; pin.value=it.price?fmt(it.price):'';
+  const ko=h('p','kohint',it.price?'일금 '+koAmount(it.price)+'원정':'');
+  pin.addEventListener('input',()=>{const d=onlyDigits(pin.value); pin.value=d?fmt(Number(d)):''; it.price=d?Number(d):null; ko.textContent=d?'일금 '+koAmount(it.price)+'원정':''; setBadge(); touch(); dockSig='';});
+  pw.append(pl,pin,ko); f.append(pw);
+  f.append(fld('가격 근거 메모 (사회자만 봄)','mm-'+it.id,it.memo,v=>{it.memo=v;touch();},{maxLength:120,placeholder:'예: 종합쇼핑몰 최저가, 10월 27일 확인'}));
+  body.append(top,f); card.append(img,body); return card;
+}
+function renderItems(){
+  const box=$('#itemList'); box.replaceChildren();
+  if(!draft.length) box.append(h('p','empty','아직 등록된 물품이 없습니다. 사진을 올리면 카드가 생기고, 카드마다 물품명과 정답 가격을 입력합니다.'));
+  draft.forEach((it,i)=>box.append(itemCard(it,i)));
+  const ok=draft.filter(validItem).length;
+  $('#itemCount').textContent='(등록 '+draft.length+'개, 준비됨 '+ok+'개)';
+  dockSig='';
+}
+const photoCache={};
+async function getPhoto(id){
+  if(photoCache[id]) return photoCache[id];
+  const s=await db.doc('photos/'+id).get();
+  const u=s.exists?(s.data().d||''):'';
+  if(u) photoCache[id]=u;
+  return u;
+}
+function setImg(img,id){
+  img.dataset.want=id||'';
+  if(!id){img.removeAttribute('src');return;}
+  if(photoCache[id]){img.src=photoCache[id];return;}
+  img.removeAttribute('src');
+  getPhoto(id).then(u=>{if(u&&img.dataset.want===id) img.src=u;}).catch(()=>{});
+}
+function loadImage(file){
+  return new Promise((res,rej)=>{
+    const url=URL.createObjectURL(file), im=new Image();
+    im.onload=()=>{URL.revokeObjectURL(url);res(im);};
+    im.onerror=()=>{URL.revokeObjectURL(url);rej(new Error('decode'));};
+    im.src=url;
+  });
+}
+async function toDataUrl(file){
+  let img;
+  try{img=await createImageBitmap(file,{imageOrientation:'from-image'});}
+  catch(e){try{img=await createImageBitmap(file);}catch(e2){img=await loadImage(file);}}
+  const w0=img.width||img.naturalWidth, h0=img.height||img.naturalHeight;
+  let side=1000, q=0.8;
+  for(let n=0;n<6;n++){
+    const sc=Math.min(1,side/Math.max(w0,h0));
+    const c=document.createElement('canvas'); c.width=Math.max(1,Math.round(w0*sc)); c.height=Math.max(1,Math.round(h0*sc));
+    c.getContext('2d').drawImage(img,0,0,c.width,c.height);
+    const u=c.toDataURL('image/jpeg',q);
+    if(u.length<700000) return u;
+    side=Math.round(side*0.8); q=Math.max(0.6,q-0.05);
+  }
+  throw new Error('too_large');
+}
+async function addFiles(files){
+  if(!canEdit){toast('사회자로 로그인해야 사진을 올릴 수 있습니다.');return;}
+  if(!draftLoaded){toast('물품 목록을 불러오는 중입니다. 잠시 뒤에 다시 올려 주세요.');return;}
+  let n=0;
+  for(const f of files){
+    n++; $('#upStat').textContent='올리는 중 '+n+' / '+files.length;
+    try{
+      const d=await toDataUrl(f);
+      const pid='p'+Date.now().toString(36)+Math.random().toString(36).slice(2,6);
+      await db.doc('photos/'+pid).set({d:d,at:Date.now()});
+      photoCache[pid]=d;
+      draft.push({id:'i'+Date.now().toString(36)+Math.random().toString(36).slice(2,5),img:pid,name:'',hint:'',price:null,memo:''});
+      renderItems(); touch();
+    }catch(e){
+      console.error(e);
+      toast('사진 '+n+'번을 올리지 못했습니다. '+(e&&e.message==='decode'?'읽을 수 없는 형식입니다. JPG나 PNG로 바꿔 주세요.':(e&&e.message==='too_large'?'용량이 너무 큽니다.':errText(e))));
+    }
+  }
+  $('#upStat').textContent='';
+}
+function paintSetup(){
+  if(S.configReady){
+    const j=$('#joinUrl'); if(!j.dataset.dirty) j.value=S.config.joinUrl||'';
+    const t=$('#cfgTimer'); if(!t.dataset.dirty) t.value=S.config.timerSec==null?60:S.config.timerSec;
+    const k=$('#cfgK'); if(!k.dataset.dirty) k.value=S.config.k==null?2:S.config.k;
+  }
+  paintKHint();
+  const list=playersSorted(); $('#plCount').textContent='('+list.length+'명)';
+  $('#plList').replaceChildren(...list.map(p=>{
+    const li=h('li'); li.append(h('span',null,nickOf(p.uid)));
+    const x=h('button',null,'×'); x.type='button'; x.setAttribute('aria-label',nickOf(p.uid)+' 내보내기');
+    x.addEventListener('click',()=>{db.doc('players/'+p.uid).delete().catch(e=>toast(errText(e)));});
+    li.append(x); return li;
+  }));
+  $('#fileBtn').disabled=!draftLoaded;
+  $('#joinUrl').placeholder=selfUrl();
+}
+function paintKHint(){
+  const k=Number($('#cfgK').value)||2;
+  const p=x=>Math.max(0,Math.round(100-x*k));
+  $('#kHint').textContent='예: 오차 5%면 '+p(5)+'점, 20%면 '+p(20)+'점, '+Math.ceil(100/k)+'% 이상이면 0점입니다.';
+}
+
+/* ---------- 참가자 ---------- */
+function renderPlay(){
+  const me=S.players[uid];
+  $('#roBanner').hidden=canWrite!==false;
+  const sec=id=>{['pJoin','pWait','pItem','pResult','pFinal'].forEach(x=>{$('#'+x).hidden=x!==id;});};
+  const st=S.state, ph=st?st.phase:'lobby';
+  if(!S.playersReady&&!me){sec('');return;}
+  if(!me||editingNick){sec('pJoin');paintJoin(!!me);return;}
+  if(ph==='open'||ph==='closed'){sec('pItem');paintPItem();}
+  else if(ph==='revealed'){sec('pResult');paintPResult();}
+  else if(ph==='total'){sec('pFinal');paintPTotal();}
+  else {sec('pWait');paintPWait();}
+}
+function paintJoin(isEdit){
+  const key=isEdit?'edit':'new';
+  if(joinFor!==key){joinFor=key; $('#nickIn').value=isEdit?S.players[uid].nick:''; $('#nickErr').textContent='';}
+  $('#joinTitle').textContent=isEdit?'닉네임을 바꿉니다':'닉네임을 정해 주세요';
+  $('#nickGo').textContent=isEdit?'변경하기':'입장하기';
+  $('#nickCancel').hidden=!isEdit;
+}
+async function submitNick(){
+  const v=$('#nickIn').value.replace(/\s+/g,' ').trim().normalize('NFC'); const err=$('#nickErr'); err.textContent='';
+  if(!v){err.textContent='닉네임을 입력해 주세요.';return;}
+  if(Array.from(v).length>10){err.textContent='닉네임은 10자까지 입니다.';return;}
+  const key=s=>s.normalize('NFC').toLowerCase();
+  if(Object.entries(S.players).some(e=>e[0]!==uid&&key(e[1].nick)===key(v))){err.textContent='이미 사용 중인 닉네임입니다. 다른 이름을 입력해 주세요. (이전에 입장하셨다면 사회자에게 알려 주세요.)';return;}
+  if(canWrite===false){err.textContent='이 계정으로는 참여할 수 없습니다. 사회자에게 참여 권한을 요청해 주세요.';return;}
+  $('#nickGo').disabled=true;
+  try{
+    await db.doc('players/'+uid).set({nick:v,at:(S.players[uid]&&S.players[uid].at)||Date.now()});
+    editingNick=false; joinFor='';
+  }catch(e){err.textContent=errText(e);}
+  $('#nickGo').disabled=false; schedule();
+}
+function paintPWait(){
+  $('#wNick').textContent=nickOf(uid);
+  const has=Object.keys(S.reveals).length>0; const list=totalsList(); const mine=list.find(x=>x.uid===uid);
+  $('#wScore').hidden=!(has&&mine);
+  if(has&&mine){$('#wTotal').textContent=fmt(mine.total); $('#wRank').textContent=mine.rank+'위 / '+list.length+'명';}
+}
+function paintPItem(){
+  const st=S.state, open=st.phase==='open';
+  if(pItemId!==st.itemId){
+    pItemId=st.itemId; $('#bidIn').value=''; $('#bidKo').textContent=''; confirming=false; $('#bidErr').textContent='';
+    setImg($('#pImg'),st.imgId);
+  }
+  $('#pNo').textContent=st.round; $('#pTotal').textContent=st.total;
+  $('#pName').textContent=st.name||('문항 '+st.round);
+  $('#pHint').textContent=st.hint||''; $('#pHint').hidden=!st.hint;
+  const rb=$('#pRibbon'); rb.textContent=open?'투찰 중':'투찰 마감'; rb.classList.toggle('live',open);
+  $('#pSigner').textContent=nickOf(uid);
+  const mine=S.myBids&&S.myBids[st.itemId];
+  if(!open) confirming=false;
+  $('#bidForm').hidden=!!mine||!open||confirming;
+  $('#bidConfirm').hidden=!(confirming&&!mine&&open);
+  $('#bidDone').hidden=!mine;
+  $('#bidMiss').hidden=!!mine||open;
+  if(mine){$('#doneNum').textContent=fmt(mine.p)+'원'; $('#doneKo').textContent='일금 '+koAmount(mine.p)+'원정';}
+  tick();
+}
+async function submitBid(){
+  const st=S.state, err=$('#bidErr');
+  if(submitting) return;
+  if(!st||st.phase!=='open'||pItemId!==st.itemId){err.textContent='투찰이 마감되었습니다.';confirming=false;schedule();return;}
+  submitting=true; $('#cfOk').disabled=true; err.textContent='';
+  try{
+    const ref=db.doc('bids/'+uid); const snap=await ref.get();
+    const b=snap.exists?Object.assign({},snap.data().b||{}):{};
+    if(!b[st.itemId]){b[st.itemId]={p:pendingBid,at:Date.now()}; await ref.set({b:b});}
+    confirming=false;
+  }catch(e){console.error(e);err.textContent=errText(e)+' 다시 눌러 주세요.';}
+  submitting=false; $('#cfOk').disabled=false; schedule();
+}
+function paintPResult(){
+  const st=S.state, rev=S.reveals[st.itemId];
+  $('#rsWait').hidden=!!rev; $('#rsBody').hidden=!rev;
+  if(!rev) return;
+  $('#rsName').textContent=rev.name||('공고 '+rev.no);
+  $('#rsAnswer').textContent=fmt(rev.answer)+'원';
+  const row=rev.rows.find(r=>r.uid===uid);
+  $('#rsMine').hidden=!row; $('#rsNone').hidden=!!row;
+  if(row){
+    $('#rsScore').textContent=row.score; $('#rsStamp').hidden=row.rank!==1;
+    $('#rsBid').textContent=fmt(row.p)+'원'; $('#rsDiff').textContent=diffText(row);
+    $('#rsRank').textContent=row.rank+'위 / '+rev.rows.length+'명 투찰';
+  }
+  const list=totalsList(); const mine=list.find(x=>x.uid===uid);
+  $('#rsTotal').textContent=mine?fmt(mine.total)+'점 · '+mine.rank+'위':'';
+  $('#rsTop').replaceChildren(...rev.rows.slice(0,3).map(x=>{const li=h('li'); li.append(h('span','rk',x.rank+'위'),h('span','nm',x.nick),h('span','pt',fmt(x.p)+'원')); return li;}));
+}
+function paintPTotal(){
+  const list=totalsList(); const mine=list.find(x=>x.uid===uid);
+  $('#ptCount').textContent=list.length+'명 참가';
+  $('#ptMine').textContent=mine?mine.rank+'위 · '+fmt(mine.total)+'점':'';
+  $('#ptList').replaceChildren(...list.slice(0,10).map(x=>{const li=h('li'); li.append(h('span','rk',x.rank+'위'),h('span','nm',x.nick),h('span','pt',fmt(x.total)+'점')); return li;}));
+}
+
+/* ---------- 시계 ---------- */
+function remaining(){
+  const st=S.state; if(!st||!st.durSec) return Infinity;
+  if(curView()==='host') return st.durSec-(Date.now()-st.openedAt)/1000;
+  return st.durSec-(Date.now()-(S.recvAt||Date.now()))/1000;
+}
+function tick(){
+  const st=S.state; if(!st) return;
+  const open=st.phase==='open', timed=!!st.durSec, rem=remaining();
+  const txt=!open?'마감':(timed?fmtClock(rem):'제한 없음');
+  ['hClock','pClock'].forEach(id=>{const e=document.getElementById(id); if(!e) return; e.textContent=txt; e.classList.toggle('low',open&&timed&&rem<=10);});
+  if(open&&timed&&rem<=0&&canEdit&&curView()==='host'&&!autoBusy&&!busy){autoBusy=true; closeRound().catch(()=>{}).then(()=>{autoBusy=false;});}
+}
+setInterval(tick,250);
+
+/* ---------- 연결 ---------- */
+function onErr(where){return e=>{console.error(where,e);toast(errText(e));};}
+function subscribe(){
+  db.doc('game/state').onSnapshot(s=>{
+    const d=s.exists?s.data():null;
+    if(!d||!S.state||d.at!==S.state.at||d.itemId!==S.state.itemId) S.recvAt=Date.now();
+    S.state=d; S.stateReady=true; schedule();
+  },onErr('state'));
+  db.doc('game/config').onSnapshot(s=>{S.config=s.exists?s.data():{}; S.configReady=true; schedule();},onErr('config'));
+  db.collection('players').onSnapshot(q=>{const m={}; q.docs.forEach(d=>{m[d.id]=d.data();}); S.players=m; S.playersReady=true; schedule();},onErr('players'));
+  db.collection('reveals').onSnapshot(q=>{const m={}; q.docs.forEach(d=>{m[d.id]=d.data();}); S.reveals=m; schedule();},onErr('reveals'));
+  db.doc('bids/'+uid).onSnapshot(s=>{S.myBids=s.exists?(s.data().b||{}):{}; schedule();},onErr('mybids'));
+  if(canEdit){
+    db.doc('secret/items').onSnapshot(s=>{
+      if(draftLoaded) return;
+      draftLoaded=true; const d=s.exists?s.data():null;
+      draft=((d&&d.list)||[]).map(x=>({id:x.id,img:x.img,name:x.name||'',hint:x.hint||'',price:x.price||null,memo:x.memo||''}));
+      renderItems(); dockSig=''; schedule();
+    },onErr('items'));
+    db.collection('bids').onSnapshot(q=>{const m={}; q.docs.forEach(d=>{m[d.id]=d.data();}); S.bids=m; schedule();},onErr('bids'));
+  }
+}
+function gateLogin(show){$('#loginBox').hidden=!show; if(show){$('#loginErr').textContent=''; setTimeout(()=>{try{$('#hostEmail').focus();}catch(e){}},50);}}
+async function boot(){
+  const cfg=window.FIREBASE_CONFIG;
+  if(!cfg||!cfg.apiKey||!cfg.projectId||/여기에|PASTE|YOUR_/i.test(cfg.apiKey+cfg.projectId)){
+    gate('설정이 필요합니다','firebase-config.js 파일에 Firebase 설정값(firebaseConfig)을 넣어 주세요.'); return;
+  }
+  if(typeof firebase==='undefined'){
+    gate('불러오지 못했습니다','Firebase 라이브러리를 불러오지 못했습니다. 인터넷 연결을 확인하고 새로고침해 주세요.'); return;
+  }
+  firebase.initializeApp(cfg);
+  auth=firebase.auth(); fs=firebase.firestore();
+  try{fs.settings({ignoreUndefinedProperties:true});}catch(e){}
+  db={doc:p=>fs.doc(p),collection:c=>fs.collection(c)};
+  let u=await new Promise(res=>{const off=auth.onAuthStateChanged(x=>{off();res(x);});});
+  if(!u){
+    try{u=(await auth.signInAnonymously()).user;}
+    catch(e){console.error(e);gate('입장할 수 없습니다','익명 로그인에 실패했습니다. 새로고침해 주세요. 계속 안 되면 사회자에게 알려 주세요.'); return;}
+  }
+  uid=u.uid; canEdit=false;
+  if(!u.isAnonymous){
+    try{const t=await u.getIdTokenResult(); canEdit=t.signInProvider==='password';}catch(e){canEdit=false;}
+  }
+  canWrite=true; booted=true; subscribe(); schedule();
+}
+
+/* ---------- 이벤트 ---------- */
+$('#goHost').addEventListener('click',()=>{location.hash='host';schedule();});
+$('#goPlay').addEventListener('click',()=>{location.hash='play';schedule();});
+window.addEventListener('hashchange',schedule);
+$('#tabRun').addEventListener('click',()=>{hostTab='run';dockSig='';schedule();});
+$('#tabSetup').addEventListener('click',()=>{hostTab='setup';schedule();});
+$('#fileBtn').addEventListener('click',()=>$('#fileIn').click());
+$('#fileIn').addEventListener('change',e=>{const fs=Array.from(e.target.files||[]); e.target.value=''; if(fs.length) addFiles(fs);});
+['#joinUrl','#cfgTimer','#cfgK'].forEach(id=>$(id).addEventListener('input',e=>{e.target.dataset.dirty='1';}));
+$('#joinSave').addEventListener('click',async()=>{
+  const v=$('#joinUrl').value.trim();
+  try{await db.doc('game/config').set(Object.assign({},S.config,{joinUrl:v})); delete $('#joinUrl').dataset.dirty; qrUrl=null; toast('접속 링크를 저장했습니다.');}catch(e){toast(errText(e));}
+});
+$('#cfgK').addEventListener('input',paintKHint);
+$('#cfgSave').addEventListener('click',async()=>{
+  const t=Math.max(0,Math.min(600,Math.round(Number($('#cfgTimer').value)||0)));
+  const k=Math.max(0.5,Math.min(10,Number($('#cfgK').value)||2));
+  try{await db.doc('game/config').set(Object.assign({},S.config,{timerSec:t,k:k})); delete $('#cfgTimer').dataset.dirty; delete $('#cfgK').dataset.dirty; toast('설정을 저장했습니다.');}catch(e){toast(errText(e));}
+});
+let resetArm=0;
+$('#resetBtn').addEventListener('click',async()=>{
+  const b=$('#resetBtn');
+  if(!resetArm){resetArm=1; b.textContent='한 번 더 누르면 모두 지워집니다'; setTimeout(()=>{resetArm=0;b.textContent='투찰·점수 초기화';},4000); return;}
+  resetArm=0; b.textContent='초기화 중'; b.disabled=true;
+  try{await resetGame($('#resetPlayers').checked); toast('초기화했습니다.');}catch(e){console.error(e);toast(errText(e));}
+  b.disabled=false; b.textContent='투찰·점수 초기화'; dockSig=''; schedule();
+});
+$('#nickGo').addEventListener('click',submitNick);
+$('#nickIn').addEventListener('keydown',e=>{if(e.key==='Enter'){e.preventDefault();submitNick();}});
+$('#nickCancel').addEventListener('click',()=>{editingNick=false;joinFor='';schedule();});
+$('#nickEdit').addEventListener('click',()=>{editingNick=true;joinFor='';schedule();});
+$('#bidIn').addEventListener('input',e=>{
+  const d=onlyDigits(e.target.value); e.target.value=d?fmt(Number(d)):'';
+  $('#bidKo').textContent=d?'일금 '+koAmount(Number(d))+'원정':''; $('#bidErr').textContent='';
+});
+$('#bidIn').addEventListener('keydown',e=>{if(e.key==='Enter'){e.preventDefault();$('#bidGo').click();}});
+$('#bidGo').addEventListener('click',()=>{
+  const d=onlyDigits($('#bidIn').value), err=$('#bidErr');
+  if(!d||Number(d)<=0){err.textContent='금액을 숫자로 입력해 주세요.';return;}
+  if(!S.state||S.state.phase!=='open'){err.textContent='투찰이 마감되었습니다.';return;}
+  if(canWrite===false){err.textContent='이 계정으로는 투찰할 수 없습니다. 사회자에게 참여 권한을 요청해 주세요.';return;}
+  pendingBid=Number(d); confirming=true;
+  $('#cfNum').textContent=fmt(pendingBid)+'원'; $('#cfKo').textContent='일금 '+koAmount(pendingBid)+'원정';
+  schedule();
+});
+$('#cfBack').addEventListener('click',()=>{confirming=false;schedule();});
+$('#cfOk').addEventListener('click',submitBid);
+
+$('#loginToggle').addEventListener('click',()=>{
+  if(canEdit){auth.signOut().then(()=>location.reload()).catch(()=>location.reload());return;}
+  gateLogin($('#loginBox').hidden);
+});
+$('#loginCancel').addEventListener('click',()=>gateLogin(false));
+async function doLogin(){
+  const em=$('#hostEmail').value.trim().toLowerCase(), pw=$('#hostPw').value, err=$('#loginErr');
+  err.textContent='';
+  if(!em||!pw){err.textContent='이메일과 비밀번호를 입력해 주세요.';return;}
+  if(!booted||!auth){err.textContent='아직 서버에 연결 중입니다. 몇 초 뒤에 다시 눌러 주세요.';return;}
+  $('#loginGo').disabled=true;
+  try{await auth.signInWithEmailAndPassword(em,pw); location.reload(); return;}
+  catch(e){
+    const c=e&&e.code;
+    err.textContent=(c==='auth/too-many-requests')?'시도가 너무 많습니다. 잠시 뒤에 다시 시도해 주세요.':(c==='auth/network-request-failed')?'네트워크 연결을 확인해 주세요.':(c==='auth/operation-not-allowed')?'Firebase에서 이메일/비밀번호 로그인이 켜져 있지 않습니다.':'이메일 또는 비밀번호가 맞지 않습니다.';
+  }
+  $('#loginGo').disabled=false;
+}
+$('#loginGo').addEventListener('click',doLogin);
+$('#hostPw').addEventListener('keydown',e=>{if(e.key==='Enter'){e.preventDefault();doLogin();}});
+
+boot().catch(e=>{console.error(e);gate('연결하지 못했습니다','페이지를 새로고침해 주세요.');});
+})();
+</script>
+</body>
+</html>
